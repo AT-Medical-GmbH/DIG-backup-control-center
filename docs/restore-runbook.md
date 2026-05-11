@@ -1,14 +1,23 @@
 # Restore Runbook
 
-## Mini-restore objective
+A backup is not considered healthy until restore-readiness is tested and documented.
 
-A backup is not considered healthy until restore-readiness is tested.
+## Mini restore
 
-## Recommended workflow
+Purpose: quick periodic verification that backup content can be read and minimally restored.
 
-1. Select a representative endpoint/provider combination.
-2. Run `scripts/atmed-bcc-restore-test --config-dir /etc/atmed-bcc` in dry-run mode.
-3. Review the planned restore target and temporary directory.
-4. Perform the operator-approved restore using site-specific restic credentials.
-5. Record the result in SQLite and in the operational change log.
-6. Escalate immediately if the restore output differs from the expected verification marker.
+## File restore
+
+Purpose: recover one or more specific files for incident response without full service replacement.
+
+## Service restore
+
+Purpose: recover a complete service dataset/configuration to a controlled target and validate startup behavior.
+
+## Full endpoint restore
+
+Purpose: recover the complete endpoint scope (data + required configuration) and validate operational integrity.
+
+## Disaster recovery exercise
+
+Purpose: rehearse cross-service recovery under realistic outage assumptions, capture timings, and document gaps.

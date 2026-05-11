@@ -1,7 +1,9 @@
 # Security Hardening
 
-- Do not expose the dashboard publicly without authentication.
-- Restrict secret files to the service account that needs them.
-- Prefer least-privilege S3 credentials and SSH principals.
-- Avoid logging environment variables or repository passwords.
-- Prepare for future role separation and OIDC/SSO integration.
+- Never store real secrets in Git. Commit only templates and placeholders.
+- Use SOPS + age for encrypted secret material tracked in version control.
+- Store the age private key in an external break-glass vault, not in this repository.
+- Restrict permissions on secret files to the minimum required service account.
+- Protect dashboard access with authentication and least-privilege authorization.
+- Prepare future SSO integration for centralized identity and policy enforcement.
+- Document key rotation procedures for age keys, access keys and notification tokens.
