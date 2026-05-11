@@ -14,3 +14,6 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/atmed-bcc /var/log/atmed-bcc
+
+[Install]
+WantedBy=multi-user.target

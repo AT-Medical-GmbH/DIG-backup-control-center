@@ -19,10 +19,12 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --config-dir)
       shift
+      [[ $# -gt 0 ]] || { echo "--config-dir requires a value" >&2; exit 1; }
       CONFIG_DIR="$1"
       ;;
     --prefix)
       shift
+      [[ $# -gt 0 ]] || { echo "--prefix requires a value" >&2; exit 1; }
       PREFIX="$1"
       ;;
     --execute)
