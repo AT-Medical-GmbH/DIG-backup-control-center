@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATMED-BCC Dashboard</title>
+    <style>{{ css }}</style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero glass">
+        <p class="eyebrow">ATMED Backup Control Center</p>
+        <h1>Backup visibility without exposing secrets</h1>
+        <p class="lede">The bootstrap dashboard separates operational status from backup execution and only reflects version-controlled configuration plus local SQLite metadata.</p>
+        <div class="meta">Generated {{ summary.generated_at }}</div>
+      </section>
+
+      <section class="grid">
+        <article class="glass stat">
+          <span class="label">Enabled endpoints</span>
+          <strong>{{ summary.endpoint_count }}</strong>
+        </article>
+        <article class="glass stat">
+          <span class="label">Enabled providers</span>
+          <strong>{{ summary.provider_count }}</strong>
+        </article>
+        <article class="glass stat">
+          <span class="label">Coverage matrix</span>
+          <strong>{{ summary.matrix_count }}</strong>
+        </article>
+        <article class="glass stat">
+          <span class="label">Recorded snapshots</span>
+          <strong>{{ summary.snapshot_count }}</strong>
+        </article>
+      </section>
+
+      <section class="panel-row">
+        <article class="glass panel">
+          <h2>Endpoints</h2>
+          <ul>
+            {% for endpoint in summary.endpoints %}
+            <li>
+              <strong>{{ endpoint.name }}</strong>
+              <span>{{ endpoint.role }} · {{ endpoint.rpo }} RPO / {{ endpoint.rto }} RTO</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </article>
+
+        <article class="glass panel">
+          <h2>Providers</h2>
+          <ul>
+            {% for provider in summary.providers %}
+            <li>
+              <strong>{{ provider.name }}</strong>
+              <span>{{ provider.type }} · {{ provider.repository }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </article>
+      </section>
+
+      <section class="panel-row">
+        <article class="glass panel">
+          <h2>Retention baseline</h2>
+          <ul class="compact">
+            <li>Daily: {{ summary.retention.daily }}</li>
+            <li>Weekly: {{ summary.retention.weekly }}</li>
+            <li>Monthly: {{ summary.retention.monthly }}</li>
+            <li>Yearly: {{ summary.retention.yearly }}</li>
+          </ul>
+        </article>
+
+        <article class="glass panel">
+          <h2>Latest recorded run</h2>
+          {% if summary.latest_run %}
+          <ul class="compact">
+            <li>Status: {{ summary.latest_run.status }}</li>
+            <li>Started: {{ summary.latest_run.started_at }}</li>
+            <li>Finished: {{ summary.latest_run.finished_at or 'still running' }}</li>
+            <li>Trigger: {{ summary.latest_run.trigger }}</li>
+          </ul>
+          {% else %}
+          <p>No backup runs recorded yet. Use the bootstrap scripts in dry-run mode first.</p>
+          {% endif %}
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

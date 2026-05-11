@@ -1,0 +1,22 @@
+[
+  {
+    "name": "mail",
+    "ssh_alias": "mail-backup",
+    "role": "mail",
+    "enabled": true,
+    "include_paths": ["/var/vmail", "/etc/postfix"],
+    "exclude_patterns": ["*.tmp", "cache/**"],
+    "rpo": "24h",
+    "rto": "4h"
+  },
+  {
+    "name": "monitor",
+    "ssh_alias": "monitor-backup",
+    "role": "monitoring",
+    "enabled": true,
+    "include_paths": ["/etc/prometheus", "/var/lib/grafana"],
+    "exclude_patterns": ["plugins/**/cache"],
+    "rpo": "24h",
+    "rto": "8h"
+  }
+]

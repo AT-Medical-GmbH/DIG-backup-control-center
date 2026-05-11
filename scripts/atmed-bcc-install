@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
+CONFIG_DIR="$REPO_DIR/examples"
+PREFIX="/opt/atmed-bcc"
+EXECUTE=0
+
+usage() {
+  cat <<'USAGE'
+Usage: atmed-bcc-install [--config-dir PATH] [--prefix PATH] [--execute]
+
+Dry-run is the default. The installer never starts services automatically.
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --config-dir)
+      shift
+      CONFIG_DIR="$1"
+      ;;
+    --prefix)
+      shift
+      PREFIX="$1"
+      ;;
+    --execute)
+      EXECUTE=1
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+printf 'Install prefix: %s\n' "$PREFIX"
+printf 'Config dir: %s\n' "$CONFIG_DIR"
+printf 'Scripts: %s/scripts\n' "$PREFIX"
+printf 'Systemd units: %s/systemd\n' "$PREFIX"
+printf 'Dashboard app: %s/app\n' "$PREFIX"
+
+if [[ $EXECUTE -eq 0 ]]; then
+  printf 'Dry-run complete. Re-run with --execute after reviewing paths and permissions.\n'
+  exit 0
+fi
+
+install -d "$PREFIX" "$PREFIX/scripts" "$PREFIX/app" "$PREFIX/systemd" "$PREFIX/db"
+cp -R "$REPO_DIR/scripts/." "$PREFIX/scripts/"
+cp -R "$REPO_DIR/app/." "$PREFIX/app/"
+cp -R "$REPO_DIR/systemd/." "$PREFIX/systemd/"
+cp -R "$REPO_DIR/db/." "$PREFIX/db/"
+printf 'Copied repository scaffold into %s\n' "$PREFIX"
+printf 'No services were started. Operator review is still required.\n'

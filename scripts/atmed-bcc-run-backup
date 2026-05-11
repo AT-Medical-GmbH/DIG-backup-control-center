@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
+CONFIG_DIR="$REPO_DIR/examples"
+MODE="dry-run"
+
+log() {
+  printf '[atmed-bcc-run-backup] %s\n' "$*"
+}
+
+die() {
+  log "ERROR: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: atmed-bcc-run-backup [--config-dir PATH] [--dry-run|--execute]
+
+Default mode is --dry-run. The bootstrap scaffold validates configuration and
+shows the endpoint/provider plan. Live restic/rclone execution must be added by
+operators in their site-specific deployment.
+USAGE
+}
+
+validate_config() {
+  python3 - "$CONFIG_DIR" <<'PY'
+import json
+import pathlib
+import sys
+
+config_dir = pathlib.Path(sys.argv[1])
+required_endpoint = {"name", "ssh_alias", "role", "enabled", "include_paths", "exclude_patterns", "rpo", "rto"}
+required_provider = {"name", "type", "remote_name", "repository_path", "enabled", "repository"}
+
+for file_name, required in (("endpoints.example.json", required_endpoint), ("providers.example.json", required_provider)):
+    data = json.loads((config_dir / file_name).read_text())
+    if not isinstance(data, list) or not data:
+        raise SystemExit(f"{file_name} must contain a non-empty JSON list")
+    for entry in data:
+        missing = sorted(required - entry.keys())
+        if missing:
+            raise SystemExit(f"{file_name} entry {entry!r} is missing: {', '.join(missing)}")
+PY
+}
+
+print_plan() {
+  python3 - "$CONFIG_DIR" <<'PY'
+import json
+import pathlib
+import sys
+
+config_dir = pathlib.Path(sys.argv[1])
+endpoints = [item for item in json.loads((config_dir / "endpoints.example.json").read_text()) if item.get("enabled")]
+providers = [item for item in json.loads((config_dir / "providers.example.json").read_text()) if item.get("enabled")]
+print("Planned backup matrix:")
+for endpoint in endpoints:
+    for provider in providers:
+        print(f"- endpoint={endpoint['name']} provider={provider['name']} repository={provider['repository']}")
+print(f"Total combinations: {len(endpoints) * len(providers)}")
+PY
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --config-dir)
+      shift
+      [[ $# -gt 0 ]] || die "--config-dir requires a value"
+      CONFIG_DIR="$1"
+      ;;
+    --dry-run)
+      MODE="dry-run"
+      ;;
+    --execute)
+      MODE="execute"
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      die "Unknown argument: $1"
+      ;;
+  esac
+  shift
+done
+
+[[ -d "$CONFIG_DIR" ]] || die "Configuration directory not found: $CONFIG_DIR"
+validate_config
+print_plan
+
+if [[ "$MODE" == "execute" ]]; then
+  die "Live backup execution is intentionally not wired into the bootstrap scaffold. Integrate site-specific restic/rclone commands before using this entrypoint for production runs."
+fi
+
+log "Dry-run complete. Configuration structure is valid."

@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
+CONFIG_DIR="$REPO_DIR/examples"
+JSON_OUTPUT=0
+CHECKS=()
+
+record_check() {
+  local name="$1"
+  local status="$2"
+  local message="$3"
+  CHECKS+=("$name|$status|$message")
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: atmed-bcc-audit [--config-dir PATH] [--json]
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --config-dir)
+      shift
+      [[ $# -gt 0 ]] || { echo "--config-dir requires a value" >&2; exit 1; }
+      CONFIG_DIR="$1"
+      ;;
+    --json)
+      JSON_OUTPUT=1
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+[[ -d "$CONFIG_DIR" ]] && record_check "config_dir" "ok" "Configuration directory present" || record_check "config_dir" "error" "Configuration directory missing"
+[[ -f "$REPO_DIR/db/schema.sql" ]] && record_check "db_schema" "ok" "Database schema present" || record_check "db_schema" "error" "Database schema missing"
+[[ -f "$REPO_DIR/app/main.py" ]] && python3 -m py_compile "$REPO_DIR/app/main.py" >/dev/null 2>&1 && record_check "python_syntax" "ok" "Dashboard backend compiles" || record_check "python_syntax" "error" "Dashboard backend failed to compile"
+
+shell_ok=1
+for script in "$REPO_DIR"/scripts/* "$REPO_DIR"/packaging/*; do
+  if ! bash -n "$script"; then
+    shell_ok=0
+  fi
+done
+if [[ $shell_ok -eq 1 ]]; then
+  record_check "shell_syntax" "ok" "Shell entrypoints pass bash -n"
+else
+  record_check "shell_syntax" "error" "One or more shell entrypoints failed bash -n"
+fi
+
+required_units=(
+  "$REPO_DIR/systemd/atmed-bcc-backup.service"
+  "$REPO_DIR/systemd/atmed-bcc-backup.timer"
+  "$REPO_DIR/systemd/atmed-bcc-dashboard.service"
+)
+unit_ok=1
+for unit in "${required_units[@]}"; do
+  [[ -f "$unit" ]] || unit_ok=0
+done
+if [[ $unit_ok -eq 1 ]]; then
+  record_check "systemd_units" "ok" "Required systemd units present"
+else
+  record_check "systemd_units" "error" "One or more systemd units missing"
+fi
+
+if python3 - "$CONFIG_DIR" >/dev/null 2>&1 <<'PY'
+import json
+import pathlib
+import sys
+
+config_dir = pathlib.Path(sys.argv[1])
+endpoint_fields = {"name", "ssh_alias", "role", "enabled", "include_paths", "exclude_patterns", "rpo", "rto"}
+provider_fields = {"name", "type", "remote_name", "repository_path", "enabled", "repository"}
+for file_name, required in (("endpoints.example.json", endpoint_fields), ("providers.example.json", provider_fields)):
+    for entry in json.loads((config_dir / file_name).read_text()):
+        missing = sorted(required - entry.keys())
+        if missing:
+            raise SystemExit(f"{file_name}: missing fields {missing}")
+PY
+then
+  record_check "example_config" "ok" "Example configuration covers required fields"
+else
+  record_check "example_config" "error" "Example configuration is incomplete or invalid"
+fi
+
+if [[ $JSON_OUTPUT -eq 1 ]]; then
+  python3 - <<'PY' "${CHECKS[@]}"
+import json
+import sys
+items = []
+for raw in sys.argv[1:]:
+    name, status, message = raw.split('|', 2)
+    items.append({"name": name, "status": status, "message": message})
+print(json.dumps({"ok": all(item["status"] == "ok" for item in items), "checks": items}, indent=2))
+PY
+else
+  printf 'ATMED-BCC audit summary\n'
+  printf '=======================\n'
+  overall=0
+  for raw in "${CHECKS[@]}"; do
+    IFS='|' read -r name status message <<<"$raw"
+    printf '%-16s %-6s %s\n' "$name" "$status" "$message"
+    [[ "$status" == "ok" ]] || overall=1
+  done
+  exit $overall
+fi
