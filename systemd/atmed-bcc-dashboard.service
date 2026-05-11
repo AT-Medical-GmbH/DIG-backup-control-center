@@ -1,0 +1,19 @@
+[Unit]
+Description=ATMED-BCC dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/atmed-bcc
+ExecStart=/usr/bin/python3 /opt/atmed-bcc/app/main.py --config-dir /etc/atmed-bcc --db-path /var/lib/atmed-bcc/atmed-bcc.sqlite3
+User=atmed-bcc
+Group=atmed-bcc
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/atmed-bcc
+
+[Install]
+WantedBy=multi-user.target

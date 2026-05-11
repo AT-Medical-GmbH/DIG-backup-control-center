@@ -1,0 +1,10 @@
+[Unit]
+Description=ATMED-BCC scheduled backup timer
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+Unit=atmed-bcc-backup.service
+
+[Install]
+WantedBy=timers.target

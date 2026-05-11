@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
+CONFIG_DIR="$REPO_DIR/examples"
+MODE="dry-run"
+
+usage() {
+  cat <<'USAGE'
+Usage: atmed-bcc-restore-test [--config-dir PATH] [--dry-run|--execute]
+
+The bootstrap scaffold only provides planning output. Live restore actions remain
+an explicit operator task after site-specific restic integration.
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --config-dir)
+      shift
+      [[ $# -gt 0 ]] || { echo "--config-dir requires a value" >&2; exit 1; }
+      CONFIG_DIR="$1"
+      ;;
+    --dry-run)
+      MODE="dry-run"
+      ;;
+    --execute)
+      MODE="execute"
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+python3 - "$CONFIG_DIR" <<'PY'
+import json
+import pathlib
+import sys
+
+config_dir = pathlib.Path(sys.argv[1])
+endpoints = [item for item in json.loads((config_dir / "endpoints.example.json").read_text()) if item.get("enabled")]
+providers = [item for item in json.loads((config_dir / "providers.example.json").read_text()) if item.get("enabled")]
+print("Planned mini-restore checks:")
+for endpoint in endpoints:
+    for provider in providers:
+        print(f"- restore test for {endpoint['name']} via {provider['name']}")
+PY
+
+if [[ "$MODE" == "execute" ]]; then
+  echo 'Live restore execution is intentionally disabled in the bootstrap scaffold.' >&2
+  exit 1
+fi
