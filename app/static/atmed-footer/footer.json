@@ -1,0 +1,132 @@
+{
+  "version": "1.0.0+2026-06-30.0d95b89ea2ce",
+  "generatedAt": "2026-06-30T16:14:44.650Z",
+  "config": {
+    "$schema": "./schema.json",
+    "schemaVersion": "1.0.0",
+    "meta": {
+      "configVersion": "1.0.0",
+      "environment": "production",
+      "sourceOfTruth": ".github/repo-templates/FOOTER_SNIPPET.md (organisationsweit verbindlich)",
+      "note": "Zentrale Quelle der Wahrheit fuer den ATMED-Footer. Inhalte hier pflegen, dann `npm run build` ausfuehren. Niemals dist/ von Hand editieren."
+    },
+    "company": {
+      "legalName": "AT Medical GmbH",
+      "displayName": "AT Medical GmbH®",
+      "claim": "Digitale Medizintechnik & sichere Gesundheits-IT",
+      "logo": {
+        "src": "https://assets.at-medical.de/logos/atmed-logo.svg",
+        "fallbackSrc": "https://raw.githubusercontent.com/AT-Medical/ATMED-assets/main/logo.png",
+        "alt": "AT Medical GmbH Logo",
+        "width": 140
+      }
+    },
+    "copyright": {
+      "startYear": 2017,
+      "endYear": 2026,
+      "line": "© Copyright 2017 - 2026 | AT Medical GmbH®",
+      "rights": "Alle Rechte vorbehalten | All rights reserved"
+    },
+    "linkGroups": [
+      {
+        "id": "legal",
+        "title": "Rechtliches",
+        "audience": "public",
+        "links": [
+          {
+            "label": "Impressum",
+            "href": "https://www.at-medical.de/impressum",
+            "rel": ""
+          },
+          {
+            "label": "AGB",
+            "href": "https://www.at-medical.de/legal/agb",
+            "rel": ""
+          },
+          {
+            "label": "Datenschutz",
+            "href": "https://www.at-medical.de/legal/datenschutz",
+            "rel": ""
+          },
+          {
+            "label": "Widerruf",
+            "href": "https://www.at-medical.de/legal/widerruf",
+            "rel": ""
+          },
+          {
+            "label": "Barrierefreiheit",
+            "href": "https://www.at-medical.de/legal/barrierefreiheit",
+            "rel": ""
+          },
+          {
+            "label": "Lieferkettenschutzgesetz",
+            "href": "https://www.at-medical.de/legal/lieferkettenschutzgesetz",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "id": "company",
+        "title": "Unternehmen",
+        "audience": "public",
+        "links": [
+          {
+            "label": "IT-Sicherheit",
+            "href": "https://www.at-medical.de/it-security",
+            "rel": ""
+          },
+          {
+            "label": "Code of Conduct",
+            "href": "https://www.at-medical.de/code-of-conduct",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "id": "contact",
+        "title": "Kontakt",
+        "audience": "public",
+        "links": [
+          {
+            "label": "Kontaktformular",
+            "href": "https://www.at-medical.de/kontakt",
+            "rel": ""
+          },
+          {
+            "label": "Info@at-medical.de",
+            "href": "mailto:Info@at-medical.de",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "id": "internal",
+        "title": "Interne Systeme",
+        "audience": "internal",
+        "links": [
+          {
+            "label": "System Control Center",
+            "href": "https://control.at-medical.de",
+            "rel": "noopener"
+          },
+          {
+            "label": "Backup Control Center",
+            "href": "https://backup.at-medical.de",
+            "rel": "noopener"
+          },
+          {
+            "label": "Status / Runbooks",
+            "href": "https://status.at-medical.de",
+            "rel": "noopener"
+          }
+        ]
+      }
+    ],
+    "social": [],
+    "options": {
+      "showLogo": true,
+      "showClaim": true,
+      "showInternalLinksOnInternalOnly": true
+    }
+  }
+}
