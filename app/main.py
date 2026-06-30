@@ -68,10 +68,29 @@ def build_summary(config_dir: Path = DEFAULT_CONFIG_DIR, db_path: Path = DEFAULT
     }
 
 
+def load_atmed_footer() -> dict[str, str]:
+    """Load the centrally-maintained ATMED footer (vendored local copy).
+
+    The artifacts under app/static/atmed-footer/ are produced by
+    ATMED-assets/shared/atmed-footer (build + deploy-footer). They are never
+    hand-edited here. If the vendor copy is missing the dashboard still
+    renders - the footer is simply omitted - so the page never breaks.
+    """
+    footer_dir = APP_DIR / "static" / "atmed-footer"
+    try:
+        # Internal variant: BCC is an internal control center.
+        html = (footer_dir / "footer.internal.html").read_text(encoding="utf-8")
+        css = (footer_dir / "footer.css").read_text(encoding="utf-8")
+        return {"html": html, "css": css}
+    except OSError:
+        return {"html": "", "css": ""}
+
+
 def render_dashboard(summary: dict[str, Any]) -> str:
     template = environment.get_template("dashboard.html")
     css = (APP_DIR / "static" / "style.css").read_text(encoding="utf-8")
-    return template.render(summary=summary, css=css)
+    footer = load_atmed_footer()
+    return template.render(summary=summary, css=css, footer=footer)
 
 
 if FastAPI is not None:

@@ -1,0 +1,5 @@
+DO NOT EDIT. Vendored copy of the central ATMED footer.
+Source: ATMED-assets/shared/atmed-footer (run build + deploy to update).
+Version: 1.0.0+2026-06-30.0d95b89ea2ce
+Synced:  2026-06-30T16:16:17.192Z
+System:  backup-control-center

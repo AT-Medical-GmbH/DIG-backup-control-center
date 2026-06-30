@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ATMED-BCC Dashboard</title>
     <style>{{ css }}</style>
+    {% if footer.css %}<style>{{ footer.css | safe }}</style>{% endif %}
+    <style>
+      /* Sticky-footer layout: footer sits at the very bottom, never over content. */
+      html, body { min-height: 100%; }
+      body { display: flex; flex-direction: column; }
+      .page { flex: 1 0 auto; }
+      .atmed-footer { flex-shrink: 0; }
+    </style>
   </head>
   <body>
     <main class="page">
@@ -86,5 +94,6 @@
         </article>
       </section>
     </main>
+    {% if footer.html %}{{ footer.html | safe }}{% endif %}
   </body>
 </html>
