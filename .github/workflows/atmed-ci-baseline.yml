@@ -1,0 +1,61 @@
+name: ATMED Reusable CI Baseline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  packages: read
+  id-token: write
+  attestations: write
+
+jobs:
+  governance:
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-governance.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      require_pr_metadata: true
+      fail_on_mutable_actions: true
+
+  secrets:
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-secret-scan.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      scan_history: false
+
+  quality:
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-quality.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      run_php_lint: false
+      run_python_compile: true
+      run_javascript_syntax: false
+      run_shell_syntax: true
+      run_structured_data_validation: true
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-dependency-review.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      fail_on_severity: high
+
+  vulnerability-review:
+    if: github.event_name == 'workflow_dispatch'
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-vulnerability-scan.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      severity: CRITICAL,HIGH
+      ignore_unfixed: true
+
+  codeql:
+    if: github.event_name == 'workflow_dispatch'
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-codeql.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      languages: '["python"]'
+
+  supply-chain:
+    if: github.event_name == 'workflow_dispatch'
+    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-sbom-provenance.yml@bf2eaa496b76e973e42165c8df56a4526a718018
+    with:
+      attest: false
+      retention_days: 30
