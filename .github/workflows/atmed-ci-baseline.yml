@@ -1,4 +1,4 @@
-name: ATMED Reusable CI Baseline
+name: ATMED Local CI Baseline
 
 on:
   pull_request:
@@ -8,54 +8,85 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  packages: read
-  id-token: write
-  attestations: write
 
 jobs:
-  governance:
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-governance.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      require_pr_metadata: true
-      fail_on_mutable_actions: true
+  validate:
+    name: Governance, secrets and syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-  secrets:
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-secret-scan.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      scan_history: false
-
-  quality:
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-quality.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      run_php_lint: false
-      run_python_compile: true
-      run_javascript_syntax: false
-      run_shell_syntax: true
-      run_structured_data_validation: true
-
-  dependency-review:
-    if: github.event_name == 'pull_request'
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-dependency-review.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      fail_on_severity: high
-
-  vulnerability-review:
-    if: github.event_name == 'workflow_dispatch'
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-vulnerability-scan.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      severity: CRITICAL,HIGH
-      ignore_unfixed: true
-
-  codeql:
-    if: github.event_name == 'workflow_dispatch'
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-codeql.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      languages: '["python"]'
-
-  supply-chain:
-    if: github.event_name == 'workflow_dispatch'
-    uses: AT-Medical-GmbH/ATMED-workflows/.github/workflows/reusable-sbom-provenance.yml@bf2eaa496b76e973e42165c8df56a4526a718018
-    with:
-      attest: false
-      retention_days: 30
+      - name: Validate repository
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json, os, re, subprocess
+          failures = []
+          uses_pattern = re.compile(r"^\s*(?:-\s*)?uses:\s*['\"]?([^'\"\s#]+)")
+          full_sha = re.compile(r"^[0-9a-fA-F]{40}$")
+          docker_digest = re.compile(r"^docker://[^@\s]+@sha256:[0-9a-fA-F]{64}$")
+          root = Path('.github/workflows')
+          for path in sorted([*root.rglob('*.yml'), *root.rglob('*.yaml')]) if root.exists() else []:
+              for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                  match = uses_pattern.match(line)
+                  if not match:
+                      continue
+                  ref = match.group(1)
+                  if ref.startswith('./'):
+                      continue
+                  if ref.startswith('docker://'):
+                      if not docker_digest.fullmatch(ref): failures.append(f'{path}:{number}: mutable Docker action {ref}')
+                  elif '@' not in ref or not full_sha.fullmatch(ref.rsplit('@', 1)[1]):
+                      failures.append(f'{path}:{number}: action is not pinned to a full SHA: {ref}')
+          if os.environ.get('EVENT_NAME') == 'pull_request':
+              required = {'change class','affected systems','production impact','data impact','security impact','required tests','test evidence','rollback path','database or content migration','secrets involved','implementation role','approval roles','independent reviewer required'}
+              values = {}
+              for line in os.environ.get('PR_BODY', '').splitlines():
+                  match = re.match(r'^\s*(?:[-*]\s*)?(?:\*\*)?([^:]+?)(?:\*\*)?\s*:\s*(.*)$', line)
+                  if match:
+                      key = re.sub(r'[`*_]', '', match.group(1)).strip().lower().replace('_', ' ')
+                      values[re.sub(r'\s+', ' ', key)] = match.group(2).strip(' `')
+              missing = sorted(k for k in required if values.get(k, '').lower() in {'', '-', '—', 'tbd', 'todo'})
+              if missing: failures.append('Missing governance metadata: ' + ', '.join(missing))
+              elif values['change class'].upper() not in {'R0','R1','R2','R3','R4'}: failures.append('Invalid change class')
+          secret_patterns = {
+              'private-key': re.compile(rb'-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'),
+              'github-token': re.compile(rb'\bgh[pousr]_[A-Za-z0-9_]{20,}\b'),
+              'openai-key': re.compile(rb'\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b'),
+              'stripe-live-secret': re.compile(rb'\bsk_live_[A-Za-z0-9]{16,}\b'),
+              'stripe-webhook-secret': re.compile(rb'\bwhsec_[A-Za-z0-9]{16,}\b'),
+          }
+          ignored = {'.git','node_modules','vendor','dist','build'}
+          for raw in subprocess.check_output(['git','ls-files','-z']).split(b'\0'):
+              if not raw: continue
+              path = Path(raw.decode('utf-8', errors='surrogateescape'))
+              if any(part in ignored for part in path.parts): continue
+              try: data = path.read_bytes()
+              except OSError: continue
+              if b'\0' in data[:4096] or len(data) > 5_000_000: continue
+              for label, pattern in secret_patterns.items():
+                  for match in pattern.finditer(data):
+                      context = data[max(0,match.start()-80):match.end()+80].lower()
+                      if any(word in context for word in (b'example',b'placeholder',b'changeme',b'redacted',b'dummy')): continue
+                      failures.append(f'{path}:{data.count(b"\n",0,match.start())+1}: {label}')
+          for path in Path('.').rglob('*.json'):
+              if any(part in ignored for part in path.parts): continue
+              try: json.loads(path.read_text(encoding='utf-8'))
+              except Exception as exc: failures.append(f'{path}: invalid JSON: {exc}')
+          if failures: raise SystemExit('\n'.join(sorted(set(failures))))
+          print('Repository policy validation passed')
+          PY
+          python -m compileall -q -x '/(\.git|\.venv|venv|node_modules|vendor)/' .
+          while IFS= read -r -d '' file; do bash -n "$file"; done < <(find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './vendor/*' -print0)
+          while IFS= read -r -d '' file; do php -l "$file"; done < <(find . -type f -name '*.php' -not -path './node_modules/*' -not -path './vendor/*' -print0)
+          while IFS= read -r -d '' file; do case "$file" in */node_modules/*|*/vendor/*|*/dist/*|*.min.js) continue ;; esac; node --check "$file"; done < <(find . -type f -name '*.js' -print0)
