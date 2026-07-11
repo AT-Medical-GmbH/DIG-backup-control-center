@@ -1,7 +1,8 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [0.1.0] - Repository Bootstrap
 
-## [Unreleased]
-### Added
-- Initial ATMED-BCC repository scaffold with documentation, example configuration, safe scripts, database schema, dashboard bootstrap, packaging helpers and CI validation.
+- Created initial repository structure.
+- Added documentation skeleton.
+- Added example configuration placeholders.
+- Added systemd and script placeholders.

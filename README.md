@@ -1,41 +1,88 @@
 # DIG-backup-control-center
 
-DIG-Backup-Control-center is the ATMED Backup Control Center (ATMED-BCC): a self-hosted backup control plane for remote `restic`/`rclone` backups, SQLite-backed audit metadata, operational visibility and restore-readiness workflows.
+## System
 
-This repository now ships the reproducible project structure, example configuration, non-destructive bootstrap scripts, dashboard skeleton and validation workflow needed to clone and customize the platform without committing secrets.
+ATMED Backup Control Center (ATMED-BCC)
 
-## Repository layout
+## Short description
 
-- `docs/` deployment, operations, restore and security guidance
-- `systemd/` service and timer units for backup and dashboard processes
-- `scripts/` safe Bash entrypoints for backup, audit, install and restore-test flows
-- `app/` dashboard bootstrap with a simple ATMED-BCC overview page
-- `db/` SQLite schema and initial migration
-- `examples/` configuration templates only, never live secrets
-- `packaging/` install, uninstall and upgrade helpers
-- `.github/workflows/validate.yml` CI checks that do not require secrets
+DIG-backup-control-center is the canonical repository scaffold for ATMED-BCC, a self-hosted backup control plane that coordinates restic/rclone backups, records metadata in SQLite, and provides operational visibility through a FastAPI dashboard.
 
-## Safety model
+## Current status
 
-- No production credentials, logs or backup data belong in Git.
-- Scripts default to non-destructive modes.
-- Live backup or restore execution remains an explicit operator action after site-specific restic/rclone integration.
-- Dashboard code is isolated from backup script execution.
+Initial repository bootstrap only. The production reference implementation currently exists externally and will be imported later in sanitized, reviewable increments.
 
-## Quick start
+## Architecture overview
 
-1. Copy the files from `examples/` into an operator-managed configuration directory.
-2. Review `docs/installation.md` and `docs/configuration.md`.
-3. Run `scripts/atmed-bcc-audit --config-dir examples` to validate the bootstrap scaffold.
-4. Start the local dashboard preview with `python3 app/main.py --config-dir examples`.
+- **scripts/**: backup orchestration, audit, install and restore-test entrypoints
+- **app/**: FastAPI dashboard backend plus static/template assets
+- **db/**: SQLite schema and migrations
+- **systemd/**: service/timer units for scheduled execution
+- **examples/**: non-secret configuration templates
+- **packaging/**: install, uninstall and upgrade helpers
+- **docs/**: installation, operations, restore and security guidance
+
+## Supported components
+
+- Bash orchestration
+- `restic`
+- `rclone`
+- SQLite
+- Python / FastAPI / Uvicorn
+- systemd services and timers
+- SOPS + age for secret management workflows
+- ntfy notifications
+- HTML/CSS/JavaScript dashboard UI
+
+## Non-goals
+
+- Committing production credentials, private logs, or production database files
+- Rewriting live backup logic speculatively during bootstrap
+- Treating backups as enterprise-ready without documented and tested restore procedures
+
+## Security warning
+
+Never commit secrets, tokens, private keys, `rclone.conf`, restic passwords, `.env` files, private logs, or production SQLite databases to Git.
+
+## High-level installation concept
+
+1. Clone repository and review docs.
+2. Copy files from `examples/` into an operator-managed secure config directory.
+3. Provide secrets outside Git (SOPS + age recommended).
+4. Validate with non-destructive audit and syntax checks.
+5. Install into target prefix and enable systemd units only after operator review.
+
+## High-level restore concept
+
+1. Run mini-restore verification first.
+2. Progress to scoped file/service restores as needed.
+3. Escalate to full endpoint restore and disaster-recovery exercises on a controlled schedule.
+4. Record outcomes and treat unresolved restore failures as blocking risk.
+
+## Roadmap
+
+- Import sanitized production reference scripts and app logic
+- Add controlled database migration history and operational audit hardening
+- Expand restore automation and drill documentation
+- Introduce stronger dashboard auth and future SSO integration
+- Prepare reusable deployment profiles for other organizations
 
 ## Validation
 
 The repository includes lightweight validation that avoids secrets and live infrastructure access:
 
-- `scripts/atmed-bcc-audit`
+- `scripts/atmed-bcc-audit --config-dir examples`
 - `bash -n scripts/*`
+- `bash -n packaging/*`
 - `python3 -m py_compile app/main.py`
+
+## Governance baseline
+
+- Treat current production behavior as reference.
+- Keep backup execution logic separated from dashboard UI logic.
+- Route changes through branches and pull requests.
+- Keep destructive operations explicit and documented.
+- Surface backup-check and restore-test failures clearly and safely.
 
 ## License
 
